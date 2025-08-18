@@ -44,11 +44,11 @@
 :root {
   --radius: 0.5rem;
   /* Professional & Accessible Color Palette */
-  --background: oklch(0.98 0.005 95);     /* Crisp white background for readability */
+  --background:   oklch(0.96 0.003 90);  /* Crisp white background for readability */
   --foreground: oklch(0.2 0.02 260);      /* Softer black for reduced eye strain */
   
   /* Refined Surfaces */
-  --card: oklch(0.96 0.003 90);
+  --card: oklch(0.98 0.005 95); 
   --popover: oklch(0.96 0.003 90);
   --sidebar: oklch(0.97 0.004 92);
   --muted: oklch(0.94 0.002 85);
