@@ -15,7 +15,7 @@ const DEFAULT_QUIZ = {
   timer: 30
 }
 
-export function QuizBuilder({ onSave }) {
+export function QuizBuilder({ onSave, isSaving }) {
   const [quizInfo, setQuizInfo] = useState(DEFAULT_QUIZ)
   const [questions, setQuestions] = useState([])
   const navigate = useNavigate()
@@ -50,11 +50,11 @@ export function QuizBuilder({ onSave }) {
           
           <Button
             onClick={handleSave}
-            disabled={questions.length === 0}
+            disabled={isSaving || questions.length === 0}
             className="gap-2"
           >
             <Save className="size-4" />
-            Save Quiz
+            {isSaving ? 'Saving...' : 'Save Quiz'}
           </Button>
         </div>
       </header>
@@ -94,9 +94,13 @@ export function QuizBuilder({ onSave }) {
           size="lg"
           className="rounded-full shadow-lg hover:shadow-xl transition-shadow h-14 w-14 p-0"
           onClick={handleSave}
-          disabled={questions.length === 0}
+          disabled={isSaving || questions.length === 0}
         >
-          <Save className="size-6" />
+          {isSaving ? (
+            <div className="size-6 border-2 border-current border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <Save className="size-6" />
+          )}
         </Button>
       </div>
     </div>
