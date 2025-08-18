@@ -2,9 +2,11 @@
 import { useEffect, useState } from 'react'
 import { Routes, Route, useNavigate } from 'react-router-dom'
 import { supabase } from './lib/supabase/supabase'
+import { Toaster } from 'sonner'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import ProfileSetup from './pages/ProfileSetup'
+import CreateQuiz from './pages/CreateQuiz'
 
 function App() {
   const [session, setSession] = useState(null)
@@ -28,7 +30,11 @@ function App() {
       if (!profile?.full_name || !profile?.department) {
         navigate('/profile-setup')
       } else {
-        navigate('/dashboard')
+        // Only navigate to dashboard if we're not already on a protected route
+        const currentPath = window.location.pathname
+        if (currentPath === '/' || currentPath === '/login') {
+          navigate('/dashboard')
+        }
       }
     } catch (error) {
       console.error('Profile check failed:', error)
@@ -37,6 +43,8 @@ function App() {
   }
 
   useEffect(() => {
+    console.log('📍 App useEffect running')
+    
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       setSession(session)
@@ -50,36 +58,48 @@ function App() {
       setLoading(false)
     }
 
+    // Set up auth listener - only once
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log('📍 Auth state changed:', event, session?.user?.id)
+        
         setSession(session)
         
-        if (session) {
-          checkProfileAndRedirect(session.user.id)
-        } else {
+        if (event === 'SIGNED_IN') {
+          if (session) {
+            checkProfileAndRedirect(session.user.id)
+          }
+        } else if (event === 'SIGNED_OUT') {
           navigate('/login')
         }
+        // Ignore INITIAL_SESSION and TOKEN_REFRESHED for navigation
       }
     )
 
     checkAuth()
 
+    // Cleanup function - important!
     return () => {
+      console.log('📍 Cleaning up auth subscription')
       subscription?.unsubscribe()
     }
-  }, [navigate])
+  }, [navigate]) // Add navigate to dependencies
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>
   }
 
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/profile-setup" element={<ProfileSetup />} />
-      <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/" element={<div>Redirecting...</div>} />
-    </Routes>
+    <>
+      <Toaster position="top-right" />
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/profile-setup" element={<ProfileSetup />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/create-quiz" element={<div>Test Page - Should Stay Here</div>} />
+        <Route path="/" element={<div>Redirecting...</div>} />
+      </Routes>
+    </>
   )
 }
 
