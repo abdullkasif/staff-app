@@ -96,7 +96,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/profile-setup" element={<ProfileSetup />} />
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/create-quiz" element={<div>Test Page - Should Stay Here</div>} />
+        <Route path="/create-quiz" element={<CreateQuiz />} />
         <Route path="/" element={<div>Redirecting...</div>} />
       </Routes>
     </>
