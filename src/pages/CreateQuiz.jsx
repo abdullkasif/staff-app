@@ -1,28 +1,39 @@
 // src/pages/CreateQuiz.jsx
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase/supabase'
 import { QuizBuilder } from '../components/quiz/QuizBuilder'
 import { toast } from 'sonner'
 
+const LOCAL_STORAGE_KEY = 'quiz_builder_draft'
+
 export default function CreateQuiz() {
   const navigate = useNavigate()
   const [isSaving, setIsSaving] = useState(false)
+  const saveAttempted = useRef(false) // Prevent duplicate saves
 
   const handleSave = async (quizData) => {
-    if (isSaving) return
+    // Prevent duplicate calls
+    if (isSaving || saveAttempted.current) {
+      console.log('📍 CreateQuiz: Save already in progress or completed')
+      return
+    }
+    
+    saveAttempted.current = true
     setIsSaving(true)
 
     try {
       // Validate required fields
       if (!quizData.title?.trim()) {
         toast.error('Please enter a quiz title')
+        saveAttempted.current = false
         setIsSaving(false)
         return
       }
 
       if (!quizData.questions || quizData.questions.length === 0) {
         toast.error('Please add at least one question')
+        saveAttempted.current = false
         setIsSaving(false)
         return
       }
@@ -39,6 +50,7 @@ export default function CreateQuiz() {
 
       if (incompleteQuestion) {
         toast.error('Please complete all questions before saving')
+        saveAttempted.current = false
         setIsSaving(false)
         return
       }
@@ -47,14 +59,16 @@ export default function CreateQuiz() {
       const {  data: { user } } = await supabase.auth.getUser()
       if (!user) {
         toast.error('Authentication error. Please log in again.')
+        saveAttempted.current = false
+        setIsSaving(false)
         navigate('/login')
         return
       }
 
-      console.log('Saving quiz data:', quizData)
+      console.log('📍 CreateQuiz: Saving quiz data', quizData)
 
       // 1. Insert quiz metadata
-      const { data: quizDataResult, error: quizError } = await supabase
+      const { data, error: quizError } = await supabase
         .from('quizzes')
         .insert({
           staff_id: user.id,
@@ -70,19 +84,20 @@ export default function CreateQuiz() {
         .single()
 
       if (quizError) {
-        console.error('Quiz insert error:', quizError)
+        console.error('📍 CreateQuiz: Quiz insert error', quizError)
         throw new Error(`Failed to create quiz: ${quizError.message}`)
       }
 
-      console.log('Quiz created result:', quizDataResult)
+      console.log('📍 CreateQuiz: Quiz response data', data)
 
-      // Check if we got the quiz ID
-      if (!quizDataResult || !quizDataResult.id) {
+      // Extract quiz ID
+      const quizId = data?.id || data?.[0]?.id
+      if (!quizId) {
+        console.error('📍 CreateQuiz: Could not extract quiz ID from response', data)
         throw new Error('Failed to get quiz ID after creation')
       }
 
-      const quizId = quizDataResult.id
-      console.log('Quiz ID:', quizId)
+      console.log('📍 CreateQuiz: Quiz ID', quizId)
 
       // 2. Insert questions
       const questionsToInsert = quizData.questions.map((q, index) => ({
@@ -96,24 +111,27 @@ export default function CreateQuiz() {
         position: index + 1
       }))
 
-      console.log('Inserting questions:', questionsToInsert)
+      console.log('📍 CreateQuiz: Inserting questions', questionsToInsert)
 
       const { error: questionsError } = await supabase
         .from('questions')
         .insert(questionsToInsert)
 
       if (questionsError) {
-        console.error('Questions insert error:', questionsError)
+        console.error('📍 CreateQuiz: Questions insert error', questionsError)
         throw new Error(`Failed to save questions: ${questionsError.message}`)
       }
 
-      // Success
+      // Success - Clear draft and redirect
+      console.log('📍 CreateQuiz: Clearing localStorage draft')
+      localStorage.removeItem(LOCAL_STORAGE_KEY)
       toast.success('Quiz saved successfully!')
       navigate('/dashboard')
       
     } catch (error) {
-      console.error('Error saving quiz:', error)
+      console.error('📍 CreateQuiz: Error saving quiz', error)
       toast.error(error.message || 'Failed to save quiz. Please try again.')
+      saveAttempted.current = false // Allow retry on error
     } finally {
       setIsSaving(false)
     }
