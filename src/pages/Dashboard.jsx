@@ -17,7 +17,9 @@ export default function Dashboard() {
 
   const fetchQuizzes = async () => {
     try {
-      const {  data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         navigate("/login");
         return;
@@ -25,7 +27,8 @@ export default function Dashboard() {
 
       const { data, error } = await supabase
         .from("quizzes")
-        .select(`
+        .select(
+          `
           id,
           title,
           subject_code,
@@ -34,7 +37,8 @@ export default function Dashboard() {
           is_published,
           created_at,
           access_codes ( code, expires_at )
-        `)
+        `
+        )
         .eq("staff_id", user.id)
         .order("created_at", { ascending: false });
 
@@ -48,24 +52,23 @@ export default function Dashboard() {
   };
 
   const handleDeleteQuiz = async (quizId) => {
-  try {
-    const { error } = await supabase
-      .from('quizzes')
-      .delete()
-      .eq('id', quizId);
+    try {
+      const { error } = await supabase
+        .from("quizzes")
+        .delete()
+        .eq("id", quizId);
 
-    if (error) throw error;
-    
-    // Refresh the quiz list
-    fetchQuizzes();
-    
-    // Show success message (you might want to add toast notifications)
-    toast.success('Quiz deleted successfully');
-  } catch (error) {
-    console.error('Error deleting quiz:', error);
-    toast.error('Failed to delete quiz');
-  }
-};
+      if (error) throw error;
+
+      // Refresh the quiz list
+      fetchQuizzes();
+
+      toast.success("Quiz deleted successfully");
+    } catch (error) {
+      console.error("Error deleting quiz:", error);
+      toast.error("Failed to delete quiz");
+    }
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -73,18 +76,21 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted">
       <DashboardHeader onLogout={handleLogout} />
-      
-      {/* Quiz List Section */}
-      <div className="container px-4 pb-12">
-        <div className="mx-auto max-w-6xl">
-          <QuizList 
-            quizzes={quizzes} 
-            loading={loading} 
-            onRefresh={fetchQuizzes}
-            onDelete={handleDeleteQuiz}
-          />
+
+      {/* Perfectly aligned Quiz List Section */}
+      <div className="border-b bg-muted/30">
+        <div className="container px-4 py-8">
+          <div className="mx-auto max-w-6xl">
+            {/* This is where QuizList will be perfectly aligned */}
+            <QuizList
+              quizzes={quizzes}
+              loading={loading}
+              onRefresh={fetchQuizzes}
+              onDelete={handleDeleteQuiz}
+            />
+          </div>
         </div>
       </div>
     </div>
