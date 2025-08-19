@@ -1,10 +1,24 @@
 // src/components/dashboard/QuizList.jsx
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Trash2, FileText, Clock, CheckCircle, BarChart3, RefreshCw, FileQuestion, Plus } from "lucide-react";
+import {
+  Trash2,
+  FileText,
+  Clock,
+  CheckCircle,
+  BarChart3,
+  RefreshCw,
+  FileQuestion,
+  Plus,
+} from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import {
   AlertDialog,
@@ -16,6 +30,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+
+import { toast } from "sonner";
+import { supabase } from "@/lib/supabase/supabase";
 
 export function QuizList({ quizzes, loading, onRefresh, onDelete }) {
   const navigate = useNavigate();
@@ -31,7 +48,7 @@ export function QuizList({ quizzes, loading, onRefresh, onDelete }) {
           </div>
           <div className="h-9 w-9 bg-muted rounded-full animate-pulse"></div>
         </div>
-        
+
         {/* Quiz Grid - Perfect alignment */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3].map((i) => (
@@ -65,13 +82,13 @@ export function QuizList({ quizzes, loading, onRefresh, onDelete }) {
         <div>
           <h2 className="text-2xl font-bold">Your Quizzes</h2>
           <p className="text-muted-foreground mt-1">
-            {quizzes.length} quiz{quizzes.length !== 1 ? 'zes' : ''} created
+            {quizzes.length} quiz{quizzes.length !== 1 ? "zes" : ""} created
           </p>
         </div>
         {quizzes.length > 0 && (
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             onClick={onRefresh}
             className="gap-2 shadow-sm hover:shadow transition-shadow"
           >
@@ -84,16 +101,16 @@ export function QuizList({ quizzes, loading, onRefresh, onDelete }) {
       {quizzes.length === 0 ? (
         /* Empty State - Perfectly Centered */
         <div className="text-center py-12">
-            <FileQuestion className="size-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium mb-2">No Quizzes yet</h3>
-            <p className="text-muted-foreground mb-4">
-              create your first quiz to get started
-            </p>
-            <Button onClick={() => navigate("/create-quiz")} className="gap-2">
-              <Plus className="size-4" />
-              Create First Quiz
-            </Button>
-          </div>
+          <FileQuestion className="size-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-medium mb-2">No Quizzes yet</h3>
+          <p className="text-muted-foreground mb-4">
+            create your first quiz to get started
+          </p>
+          <Button onClick={() => navigate("/create-quiz")} className="gap-2">
+            <Plus className="size-4" />
+            Create First Quiz
+          </Button>
+        </div>
       ) : (
         /* Quiz Grid - Perfect alignment with avatar */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -106,17 +123,61 @@ export function QuizList({ quizzes, loading, onRefresh, onDelete }) {
   );
 }
 
+
+
 function QuizCard({ quiz, onDelete }) {
   const navigate = useNavigate();
   const isPublished = quiz.is_published;
   const accessCode = quiz.access_codes?.[0]?.code;
   const expiresAt = quiz.access_codes?.[0]?.expires_at;
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
 
   const handlePublish = async () => {
-    // We'll implement this next
-    console.log('Publish quiz:', quiz.id);
-    // This will generate access code and mark as published
+    setIsPublishing(true);
+    try {
+      // 1. Generate 5-digit access code
+      const code = Math.floor(10000 + Math.random() * 90000).toString();
+      
+      // 2. Set expiry (1 hour from now)
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+      
+      // 3. Save access code to database
+      const { error: codeError } = await supabase
+        .from('access_codes')
+        .insert({
+          quiz_id: quiz.id,
+          code: code,
+          expires_at: expiresAt,
+          is_active: true
+        });
+      
+      if (codeError) throw codeError;
+      
+      // 4. Update quiz status to published
+      const { error: quizError } = await supabase
+        .from('quizzes')
+        .update({ is_published: true })
+        .eq('id', quiz.id);
+      
+      if (quizError) throw quizError;
+      
+      // 5. Show success and refresh (you might want to call a refresh function)
+      toast.success('Quiz published successfully!', {
+        description: `Access code: ${code}`
+      });
+      
+      // 6. Reload the page or refresh the quiz list
+      window.location.reload();
+      
+    } catch (error) {
+      console.error('Error publishing quiz:', error);
+      toast.error('Failed to publish quiz', {
+        description: error.message
+      });
+    } finally {
+      setIsPublishing(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -182,9 +243,19 @@ function QuizCard({ quiz, onDelete }) {
                 size="default" 
                 className="flex-1 bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 transition-all"
                 onClick={handlePublish}
+                disabled={isPublishing}
               >
-                <CheckCircle className="size-4 mr-2" />
-                Publish
+                {isPublishing ? (
+                  <>
+                    <div className="size-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+                    Publishing...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="size-4 mr-2" />
+                    Publish
+                  </>
+                )}
               </Button>
               <Button 
                 variant="outline" 
@@ -200,8 +271,8 @@ function QuizCard({ quiz, onDelete }) {
             // Published mode: Results + Delete buttons
             <>
               <Button 
-                size="sm" 
-                className="flex-1 shadow-sm hover:shadow"
+                size="default" 
+                className="flex-1 bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 transition-all"
                 onClick={() => navigate(`/quiz/${quiz.id}/results`)}
               >
                 <BarChart3 className="size-4 mr-2" />
@@ -209,7 +280,7 @@ function QuizCard({ quiz, onDelete }) {
               </Button>
               <Button 
                 variant="outline" 
-                size="sm" 
+                size="default" 
                 className="flex-1 border-destructive text-destructive hover:bg-destructive/5 hover:text-destructive"
                 onClick={() => setShowDeleteDialog(true)}
               >
