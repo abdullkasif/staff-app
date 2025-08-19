@@ -123,8 +123,6 @@ export function QuizList({ quizzes, loading, onRefresh, onDelete }) {
   );
 }
 
-
-
 function QuizCard({ quiz, onDelete }) {
   const navigate = useNavigate();
   const isPublished = quiz.is_published;
@@ -162,13 +160,15 @@ function QuizCard({ quiz, onDelete }) {
       
       if (quizError) throw quizError;
       
-      // 5. Show success and refresh (you might want to call a refresh function)
+      // 5. Show success and refresh
       toast.success('Quiz published successfully!', {
         description: `Access code: ${code}`
       });
       
-      // 6. Reload the page or refresh the quiz list
-      window.location.reload();
+      // 6. Refresh the quiz list
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
       
     } catch (error) {
       console.error('Error publishing quiz:', error);

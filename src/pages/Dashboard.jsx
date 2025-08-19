@@ -25,6 +25,13 @@ export default function Dashboard() {
         return;
       }
 
+      // Check if user is staff
+      const userRole = user?.user_metadata?.user_role;
+      if (userRole !== 'staff') {
+        navigate("/login");
+        return;
+      }
+
       const { data, error } = await supabase
         .from("quizzes")
         .select(
@@ -46,6 +53,7 @@ export default function Dashboard() {
       setQuizzes(data || []);
     } catch (error) {
       console.error("Error fetching quizzes:", error);
+      toast.error("Failed to load quizzes");
     } finally {
       setLoading(false);
     }

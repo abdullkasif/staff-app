@@ -16,8 +16,16 @@ export default function DashboardHeader({ onLogout }) {
       const {  data: { user } } = await supabase.auth.getUser();
       if (user) {
         setUser(user);
+        
+        // Check if user is staff
+        const userRole = user?.user_metadata?.user_role;
+        if (userRole !== 'staff') {
+          onLogout(); // or navigate('/login')
+          return;
+        }
+        
         const { data, error } = await supabase
-          .from("profiles")
+          .from("staff_profiles")
           .select("full_name, department")
           .eq("id", user.id)
           .single();
@@ -29,7 +37,7 @@ export default function DashboardHeader({ onLogout }) {
     };
 
     fetchUserData();
-  }, []);
+  }, [onLogout]);
 
   const handleCreateQuiz = () => {
     navigate("/create-quiz");
