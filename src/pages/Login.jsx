@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase/supabase'
-import { LoginForm } from '../components/auth/LoginForm' // Adjust path if needed
+import { LoginForm } from '../components/auth/LoginForm'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -18,11 +18,15 @@ export default function Login() {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${window.location.origin}/dashboard`,
+        emailRedirectTo: `${window.location.origin}/profile-setup`,
+        data: {
+          user_role: 'staff'
+        }
       },
     })
 
     if (error) {
+      console.error('Login error:', error)
       setMessage(`Error: ${error.message}`)
     } else {
       setMessage('Check your email for the login link!')
@@ -31,14 +35,24 @@ export default function Login() {
   }
 
   const handleGoogleLogin = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/dashboard`,
-      },
-    })
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/profile-setup`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
+        },
+      })
 
-    if (error) {
+      if (error) {
+        console.error('Google login error:', error)
+        setMessage(`Error: ${error.message}`)
+      }
+    } catch (error) {
+      console.error('Google login exception:', error)
       setMessage(`Error: ${error.message}`)
     }
   }

@@ -14,6 +14,7 @@ import {
 } from '../components/ui/select'
 import { GalleryVerticalEnd } from "lucide-react"
 import { cn } from '../lib/utils'
+import { toast } from 'sonner'
 
 const DEPARTMENTS = [
   'Computer Science (Aided)',
@@ -30,40 +31,32 @@ export default function ProfileSetup() {
   const navigate = useNavigate()
 
   // Prefill existing data if available
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) {
-          navigate('/login')
-          return
-        }
-
-        const { data, error: profileError } = await supabase
-          .from('profiles')
-          .select('full_name, department')
-          .eq('id', user.id)
-          .single()
-
-        if (profileError) {
-          console.error('Error fetching profile:', profileError)
-          setError('Failed to load profile data')
-          return
-        }
-
-        if (data) {
-          if (data.full_name) setFullName(data.full_name)
-          if (data.department) setDepartment(data.department)
-        }
-      } catch (err) {
-        console.error('Profile fetch error:', err)
-        setError('Failed to load profile')
+useEffect(() => {
+  const fetchProfile = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        navigate('/login')
+        return
       }
+
+      const { data: profile } = await supabase
+        .from('staff_profiles')
+        .select('full_name, department')
+        .eq('id', user.id)
+        .single()
+
+      if (profile) {
+        if (profile.full_name) setFullName(profile.full_name)
+        if (profile.department) setDepartment(profile.department)
+      }
+    } catch (err) {
+      console.error('Profile fetch error:', err)
     }
+  }
 
-    fetchProfile()
-  }, [navigate])
-
+  fetchProfile()
+}, [navigate])
   const validateForm = () => {
     if (!fullName.trim()) {
       setError('Full name is required')
@@ -84,28 +77,43 @@ export default function ProfileSetup() {
     setError('')
 
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const {  data: { user } } = await supabase.auth.getUser()
       if (!user) {
         setError('User not found. Please log in again.')
         navigate('/login')
         return
       }
 
-      const { error: updateError } = await supabase
-        .from('profiles')
+      // Insert or update staff profile
+      const { error: upsertError } = await supabase
+        .from('staff_profiles')
         .upsert({
           id: user.id,
           full_name: fullName.trim(),
           department: department.trim(),
           updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'id'
         })
 
-      if (updateError) throw updateError
+      if (upsertError) throw upsertError
 
+      // For Google users, update user metadata
+      const userRole = user?.user_metadata?.user_role;
+      if (!userRole) {
+        await supabase.auth.updateUser({
+          data: {
+            user_role: 'staff'
+          }
+        })
+      }
+
+      toast.success('Profile updated successfully!')
       navigate('/dashboard')
     } catch (err) {
-      console.error('Profile update error:', err)
+      console.error('Staff profile update error:', err)
       setError(err.message || 'Failed to update profile')
+      toast.error('Failed to update profile')
     } finally {
       setLoading(false)
     }
@@ -138,13 +146,14 @@ export default function ProfileSetup() {
                         onChange={(e) => setFullName(e.target.value)}
                         placeholder="Enter your full name"
                         required
+                        className="py-5"
                       />
                     </div>
 
                     <div className="grid gap-3">
                       <Label htmlFor="department">Department</Label>
                       <Select value={department} onValueChange={setDepartment} required>
-                        <SelectTrigger>
+                        <SelectTrigger className="py-5">
                           <SelectValue placeholder="Select your department" />
                         </SelectTrigger>
                         <SelectContent>
@@ -165,7 +174,7 @@ export default function ProfileSetup() {
 
                     <Button 
                       type="submit" 
-                      className="w-full" 
+                      className="w-full py-5" 
                       disabled={loading || !fullName.trim() || !department}
                     >
                       {loading ? (
