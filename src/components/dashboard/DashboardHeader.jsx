@@ -70,8 +70,8 @@ export default function DashboardHeader({ onLogout }) {
       </header>
 
       {/* Symmetrical Profile Section */}
-      <div className="container px-4 py-12"> {/* Increased vertical padding */}
-        <div className="mx-auto max-w-md"> {/* Narrower, more focused card */}
+      <div className="container px-4 py-12">
+        <div className="mx-auto max-w-md">
           <div className="flex flex-col items-center text-center space-y-6">
             {/* Avatar */}
             <Avatar className="size-20 ring-4 ring-primary/10">
@@ -95,10 +95,10 @@ export default function DashboardHeader({ onLogout }) {
             </div>
 
             {/* CTA Button */}
-            <div className="pt-2"> {/* Extra padding above button */}
+            <div className="pt-2">
               <Button 
                 size="lg" 
-                className="px-8 py-6 text-base"
+                className="px-8 py-6 text-base shadow-md hover:shadow-lg transition-shadow"
                 onClick={handleCreateQuiz}
               >
                 + Create New Quiz
